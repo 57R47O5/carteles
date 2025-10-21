@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
-    'carteles_app',
+    'core_app',
     'users',
     'rest_framework.authtoken',
     ]
