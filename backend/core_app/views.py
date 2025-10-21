@@ -14,44 +14,45 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .framework.exceptions import excepcion, ExcepcionPermisos, ExcepcionBase, ExcepcionValidacion
 from .serializers import UserRegisterSerializer, UserLookupSerializer
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @csrf_protect
+@excepcion
 def register_view(request):
     serializer = UserRegisterSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    if not serializer.is_valid():
+        raise ExcepcionBase('Error en el registro')
+    serializer.save()
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @csrf_protect
+@excepcion
 def login_view(request):
     username = request.data.get('username')
     password = request.data.get('password')
 
     if not username or not password:
-        return Response({'error': 'Debe ingresar usuario y contraseña.'},
-                        status=status.HTTP_400_BAD_REQUEST)
+        raise ExcepcionValidacion('Debe ingresar usuario y contraseña')
 
     user = authenticate(request, username=username, password=password)
 
-    if user is not None:
-        login(request, user)
-        return Response({
-            'message': 'Inicio de sesión exitoso.',
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-            }
-        }, status=status.HTTP_200_OK)
-    else:
-        return Response({'error': 'Credenciales inválidas.'},
-                        status=status.HTTP_401_UNAUTHORIZED)
+    if user is None:
+        raise ExcepcionPermisos('Credenciales inválidas')
+    login(request, user)
+    return Response({
+        'message': 'Inicio de sesión exitoso.',
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+        }
+    }, status=status.HTTP_200_OK)
+
     
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -146,14 +147,6 @@ def password_reset_confirm(request, uidb64, token):
         {"error": "El token es inválido o ha expirado."},
         status=status.HTTP_400_BAD_REQUEST,
     )
-
-
-class CartelListAPIView(APIView):
-    """
-    Ejemplo simple: devuelve lista vacía hasta que definamos el modelo.
-    """
-    def get(self, request):
-        return Response([], status=status.HTTP_200_OK)
 
 @ensure_csrf_cookie
 def get_csrf_token(request):
